@@ -32,7 +32,8 @@ if(!file.exists(quantile_file) | override_quantile_file == TRUE) {
   predictions <- lapply(prediction_files, function(x){ readRDS(file.path(predictions_path, x)) }) %>%
     bind_rows()
   
-  ufp_quantiles <- lapply(seq(0, 1, 0.005), function(q){
+  ufp_quantiles <- lapply(seq(0, 1, 0.01 #0.005
+                              ), function(q){
     tibble(quantile = q,
            conc = quantile(predictions$ufp, q))
     }) %>%
@@ -93,9 +94,4 @@ lapply(predictions_files, function(f) {
   
 })
 
-
-
-test <- readRDS(file.path(output_path, "al_e_block10_predictions.rda"))
-test.csv <- read.csv(file.path(output_path, "../txt/al_e_block10_predictions.txt"))
-
-identical(test, test.csv)
+ 
