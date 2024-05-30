@@ -1,7 +1,7 @@
 # National UFP Predictions
 This project is used to generate UFP predictions across the US using the existing 2016-2017 (Saha et al. 2021) and updated UFP models
 
-Predictions are generated using the [ufp.model.saha2021 package]<https://github.com/karr-lab/ufp_model>
+Predictions are generated using the [ufp.model.saha2021 package](https://github.com/karr-lab/ufp_model)
 
 ## Summary of Steps
 
