@@ -23,7 +23,8 @@ if (!is.null(sessionInfo()$otherPkgs)) {
 output_path <- file.path("output", "predictions", "original_model", "blocks", "raw")
 
 # create directories
-lapply(c(output_path,
+lapply(c("input",
+         output_path,
         file.path("output", "predictions", "original_model", "blocks", "modified"),
          file.path("output", "qc"),
          file.path("output", "winsorize")
