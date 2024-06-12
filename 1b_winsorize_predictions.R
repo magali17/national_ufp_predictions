@@ -22,8 +22,7 @@ quantile_files <- paste0("raw_quantiles_", prediction_files)
 use_cores <- 4 #6 is slow during winsorizing???
 
 ####################################################################
-
-testing_mode <- TRUE
+testing_mode <- FALSE
 override_quantile_file <- TRUE # TRUE if e.g., updating missing block covariates
 override_winsorized_file <- TRUE
 
@@ -57,7 +56,7 @@ lapply(c(quantile_files), function(f){
       quantile_list <- c(0.02, 0.98)
       }
     
-    message(paste("calculating UFP quantiles:", this_quantile_file))
+    message(paste("calculating UFP quantiles"))
     ufp_quantiles <- mclapply(quantile_list, mc.cores = use_cores, function(q){
       tibble(quantile = q,
              
@@ -66,7 +65,7 @@ lapply(c(quantile_files), function(f){
     }) %>%
       bind_rows()
     
-    message("...saving UFP quantile file")
+    message(paste("...saving UFP quantile file", this_quantile_file))
     saveRDS(ufp_quantiles, this_quantile_file)
   } else{
     message(paste("reading in existing UFP quantiles:", this_quantile_file))
@@ -87,7 +86,6 @@ message("winsorizing predictions")
 mclapply(prediction_files, mc.cores = use_cores, function(f) {
   
   raw_file <- file.path(input_path, f)
-  message(paste0("...", raw_file))
   modified_file <- file.path(output_path, f)
   
   if(!file.exists(modified_file) | 
@@ -111,6 +109,7 @@ mclapply(prediction_files, mc.cores = use_cores, function(f) {
            winsorized = ifelse(ufp < low_conc | ufp > high_conc, TRUE, FALSE))
   
   # save modified predictions
+  message(paste("...saving:", modified_file))
   saveRDS(predictions_modified, modified_file)
   }
   
