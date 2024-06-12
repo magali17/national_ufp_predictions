@@ -17,9 +17,9 @@ if (!is.null(sessionInfo()$otherPkgs)) {
 # remotes::install_github('karr-lab/ufp_model', auth_token = "ADD YOUR TOKEN HERE")
 
 ####################################################################
-# pacman::p_load(ufp.model.saha2021,
-#                tidyverse)
+pacman::p_load(ufp.model.saha2021)
 
+# create directories
 output_path <- file.path("output", "predictions", "original_model", "blocks", "raw")
 
 # create directories
@@ -30,11 +30,6 @@ lapply(c("input",
          file.path("output", "winsorize")
          ), 
        function(x) {if(!dir.exists(x)){dir.create(x, recursive = T)}})
-
-
-
-
-
 
 ####################################################################
 #  

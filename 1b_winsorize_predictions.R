@@ -53,8 +53,8 @@ lapply(c(quantile_files), function(f){
     
     if(testing_mode==TRUE){
       message("...testing mode")
-      predictions <- predictions[1:1e3,]
-      quantile_list <- quantile_list[1:2]
+      predictions <- predictions[1:100,]
+      quantile_list <- c(0.02, 0.98)
       }
     
     message(paste("calculating UFP quantiles:", this_quantile_file))
@@ -81,18 +81,20 @@ lapply(c(quantile_files), function(f){
 # blocks that were dropped have a slightly different distribution, with the largest discrepancy being that blocks dropped on average had higher predictions, but not always
 # we want predictions for these locations b/c we have ECHO participants living in these areas 
 
-# f=prediction_files[1]
+message("winsorizing predictions")
+
+# f=prediction_files[2]
 mclapply(prediction_files, mc.cores = use_cores, function(f) {
   
   raw_file <- file.path(input_path, f)
+  message(paste0("...", raw_file))
   modified_file <- file.path(output_path, f)
   
   if(!file.exists(modified_file) | 
      override_winsorized_file == TRUE) {
-    message("winsorizing values")
     
   # winsorization values for specific year covariates
-  ufp_quantiles <- readRDS("output", "winsorize", paste0("raw_quantiles_", f))
+  ufp_quantiles <- readRDS(file.path("output", "winsorize", paste0("raw_quantiles_", f)))
   low_conc <- ufp_quantiles$conc[ufp_quantiles$quantile==low_quantile] %>% as.numeric()
   high_conc <- ufp_quantiles$conc[ufp_quantiles$quantile==high_quantile] %>% as.numeric()
   
@@ -100,7 +102,7 @@ mclapply(prediction_files, mc.cores = use_cores, function(f) {
   
   if(testing_mode==TRUE){
     message("...testing mode")
-    raw_predictions <- raw_predictions[1:1e3,]
+    raw_predictions <- raw_predictions[1:100,]
     }
     
   predictions_modified <- raw_predictions %>% 
