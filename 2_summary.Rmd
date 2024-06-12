@@ -1,0 +1,74 @@
+---
+title: "UFP predictions from the original Saha et al. 2021 Model"
+author: "Magali Blanco"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+# Notes
+
+* UFP predictions have been updated       
+  * the new predictions use recreated (similar) 1k grid UFP data to fit the model     
+  * we generate predictions for all blocks (not just those with pop>0 or those within the geocovariate modeling space)        
+  * predictions are for all 2010 Census blocks (like original model) as well as 2020 Census blocks 
+  * to address extreme UFP predictions (e.g., Manhattan), we winsorize the predictions below/above the 2nd and 98th quantiles 
+    *
+    * there are many ways to do this (e.g., could winsorize the covariates). This is probably the most straightforward since we are 
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = F, 
+                      cache=F, cache.comments = F, 
+                      message = F, warning = F, 
+                      tidy.opts=list(width.cutoff=60), tidy=TRUE )  
+
+# Clear workspace of all objects and unload all extra (non-base) packages
+rm(list = ls(all = TRUE))
+if (!is.null(sessionInfo()$otherPkgs)) {
+  res <- suppressWarnings(
+    lapply(paste('package:', names(sessionInfo()$otherPkgs), sep=""),
+           detach, character.only=TRUE, unload=TRUE, force=TRUE))
+}
+
+pacman::p_load(tidyverse#, sf
+               )  
+
+# ggplot settings
+theme_set(theme_bw())
+theme_update(legend.position = "bottom")
+
+
+##################################################################################################
+# VARIABLES
+##################################################################################################
+project_crs <- 4326  #lat/long
+
+# speed thigns up
+testing_mode <- FALSE #TRUE #e.g., reduce visit designs & windows/quantile combinations
+
+
+##################################################################################################
+# LOAD DATA
+##################################################################################################
+# quantile summary files
+ufp_quantiles_2010 <- readRDS(file.path("output", "winsorize", "raw_quantiles_ufp_covs_2010.rds"))
+ufp_quantiles_2020 <- readRDS(file.path("output", "winsorize", "raw_quantiles_ufp_covs_2020.rds"))
+
+# raw UFP predictions
+ufp_2010 <- readRDS(file.path("output", "predictions", "original_model", "blocks", "raw", "ufp_covs_2010.rds"))
+ufp_2020w <- readRDS(file.path("output", "predictions", "original_model", "blocks", "raw", "ufp_covs_2020.rds"))
+
+# winsorized predictions
+ufp_2010w <- readRDS(file.path("output", "predictions", "original_model", "blocks", "modified", "ufp_covs_2010.rds"))
+ufp_2020w <- readRDS(file.path("output", "predictions", "original_model", "blocks", "modified", "ufp_covs_2020.rds"))
+
+
+```
+
+
+
+```{r}
+
+
+```
+
