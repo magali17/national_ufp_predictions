@@ -19,13 +19,15 @@ if (!is.null(sessionInfo()$otherPkgs)) {
 pacman::p_load(ufp.model.saha2021,
                tidyverse)
 
-output_path <- file.path("output", "predictions", "2016_2017", "raw", "blocks")
+output_path <- file.path("output", "predictions", "original_model", "blocks", "raw")
 
 # create directories
-lapply(c(file.path(output_path, "txt"),
-         file.path(output_path, "rda"),
-         file.path("output", "predictions", "2016_2017", "modified", "blocks", "txt"),
-         file.path("output", "predictions", "2016_2017", "modified", "blocks", "rda"),
+lapply(c(output_path,
+         #file.path(output_path, "txt"),
+         #file.path(output_path, "rda"),
+         #file.path("output", "predictions", "original_model", "blocks","modified",  "txt"),
+         #file.path("output", "predictions", "original_model", "blocks", "modified", "rda"),
+        file.path("output", "predictions", "original_model", "blocks", "modified"),
          file.path("output", "qc"),
          file.path("output", "winsorize")
          ), 
