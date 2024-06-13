@@ -14,7 +14,7 @@ if (!is.null(sessionInfo()$otherPkgs)) {
 pacman::p_load(ufp.model.saha2021, tidyverse)
 
 # if prediction files already exist, should these be overwritten?
-override_predictions <- FALSE
+override_predictions <- TRUE
 
 covariate_path <- file.path("input")
 predictions_path <- file.path("output", "predictions", "original_model", "blocks", "raw")
@@ -49,6 +49,7 @@ lapply(covariate_files, function(x) {
     predictions <- predictUFP(covariates)
     
     # save predictions
+    message("...saving predictions") 
     saveRDS(predictions, new_prediction_file)
   } else {
     message(paste("predictions for", x, "already exist"))
@@ -61,6 +62,10 @@ lapply(covariate_files, function(x) {
 ####################################################################
 
 
+####################################################################
+# DONE
+####################################################################
+message("DONE WITH 1a_predict_with_og_model.R")
 
 
 
