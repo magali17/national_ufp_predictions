@@ -210,6 +210,9 @@ map of winsorized vs non-winsorized
 ```{r}
 ufp_2010 %>%
   filter(winsorized==TRUE) %>%
+  mutate(winsorized = ifelse(ufp_winsorized<ufp_original, "prediction reduced",
+                                   ifelse(ufp_winsorized>ufp_original, "prediction increased", "not changed")
+                                   )) %>%
   st_as_sf(coords = c('long_block', 'lat_block'), crs=project_crs) %>%
   
   ggplot() + 
