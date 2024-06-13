@@ -19,11 +19,11 @@ editor_options:
 
 UFP predictions have been updated:       
 
-* the new predictions use recreated (similar) 1k grid UFP data to fit the model     
-* we generate predictions for all blocks (not just those with pop>0 or those within the geocovariate modeling space)        
-* predictions are for all 2010 Census blocks (like the original model) as well as for 2020 Census blocks 
-* to address extreme UFP predictions (e.g., Manhattan), we winsorize the predictions below/above the specific quantiles
-  * there are many ways to do this (e.g., could winsorize the covariates). This is probably the most straightforward since we are 
+* the new predictions use recreated (similar) 1k grid UFP data to fit the model   
+* predictions are for all 2010 Census blocks (like the original model) as well as for 2020 Census blocks    
+* we generate predictions for all blocks (not just those with pop>0 or those within the geocovariate modeling space) since cohort members may live at highly populated locations without predictions (e.g., Manhattan)      
+* to address extreme UFP predictions due to modeling outside of the covariate space, we winsorize the predictions below/above the specific quantiles
+  * there are many ways to do this (e.g., could have winsorize the covariates). This is probably the most straightforward. 
 
 
 ```{r setup, include=FALSE}
