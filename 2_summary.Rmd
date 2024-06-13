@@ -93,7 +93,7 @@ if(file.exists(state_file)) {
 
 ```
 
-# Blocks with missing predictions
+# missing predictions
 
 these blocks have missing predictions due to missing model covariates 
 
@@ -110,7 +110,7 @@ ufp_2010 %>%
 ```
 
 
-# Quantiles used to winsoirze extreme UFP predictions  
+# quantile summary
 
 Currently winsorizing at the 1st and 99th percentiles 
 
@@ -131,9 +131,23 @@ bind_rows(ufp_quantiles_2010#,
 
 ```
 
+# prediction distribution
+
+```{r}
+bind_rows(ufp_quantiles_2010#, 
+          #ufp_quantiles_2020
+          ) %>%
+  summarize(
+    n = n(),
+    missing = sum(is.na(ufp_winsorized)),
+    min=min(ufp_winsorized, na.rm = T),
+    
+  )
+
+```
 
 
-# Comparison of original & winsorized UFP predictions 
+# compare original & winsorized UFP predictions 
 
 histogram 
 
