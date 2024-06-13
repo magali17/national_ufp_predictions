@@ -1,8 +1,16 @@
 ---
-title: "UFP predictions from the original Saha et al. 2021 Model"
+title: "Block-level UFP predictions - Slightly modified from the original Saha et al. 2021 Model"
 author: "Magali Blanco"
 date: "`r Sys.Date()`"
-output: html_document
+output:
+  html_document:
+    df_print: paged
+    toc: yes
+    toc_depth: '3'
+    number_sections: true
+    toc_float: true
+    collapsed: false
+    smooth_scroll: false
 editor_options: 
   chunk_output_type: console
 ---
@@ -10,6 +18,7 @@ editor_options:
 # Notes
 
 UFP predictions have been updated:       
+
 * the new predictions use recreated (similar) 1k grid UFP data to fit the model     
 * we generate predictions for all blocks (not just those with pop>0 or those within the geocovariate modeling space)        
 * predictions are for all 2010 Census blocks (like the original model) as well as for 2020 Census blocks 
@@ -21,7 +30,8 @@ UFP predictions have been updated:
 knitr::opts_chunk$set(echo = F, 
                       cache=F, cache.comments = F, 
                       message = F, warning = F, 
-                      tidy.opts=list(width.cutoff=60), tidy=TRUE )  
+                      tidy.opts=list(width.cutoff=60), tidy=TRUE, 
+                      fig.height = 8, fig.width = 10)  
 
 # Clear workspace of all objects and unload all extra (non-base) packages
 rm(list = ls(all = TRUE))
@@ -69,7 +79,7 @@ ufp_2010 <- readRDS(file.path("output", "predictions", "original_model", "blocks
   mutate(year=2010)
 
 if(testing_mode==TRUE){
-  ufp_2010 <- slice_sample(ufp_2010, n = 1e6)
+  ufp_2010 <- slice_sample(ufp_2010, n = 1e2)
   }
 
 # ufp_2020 <- readRDS(file.path("output", "predictions", "original_model", "blocks", "modified", "ufp_covs_2020.rds"))  %>%
@@ -144,20 +154,26 @@ bind_rows(ufp_quantiles_2010#,
 bind_rows(ufp_2010#, 
           #ufp_2020 
           ) %>%
-  group_by(block_year=year) %>%
+  select(block_key, block_year=year, contains("ufp")) %>%
+  pivot_longer(cols = contains("ufp")) %>%
+  mutate(block_year = as.character(block_year)) %>%
+  group_by(block_year, name) %>%
   summarize(
     n = n(),
-    missing = sum(is.na(ufp_winsorized)),
-    min=min(ufp_winsorized, na.rm = T),
-    Q01 = quantile(ufp_winsorized, probs = 0.01, na.rm = T),
-    Q05 = quantile(ufp_winsorized, probs = 0.05, na.rm = T),
-    Q25 = quantile(ufp_winsorized, probs = 0.05, na.rm = T),
-    Q50 = quantile(ufp_winsorized, probs = 0.50, na.rm = T),
-    Q75 = quantile(ufp_winsorized, probs = 0.75, na.rm = T),
-    Q95 = quantile(ufp_winsorized, probs = 0.95, na.rm = T),
-    Q99 = quantile(ufp_winsorized, probs = 0.99, na.rm = T),
-    max = max(ufp_winsorized, na.rm = T)
-  )
+    missing = sum(is.na(value)),
+    min=min(value, na.rm = T),
+    Q01 = quantile(value, probs = 0.01, na.rm = T),
+    Q05 = quantile(value, probs = 0.05, na.rm = T),
+    Q25 = quantile(value, probs = 0.05, na.rm = T),
+    Q50 = quantile(value, probs = 0.50, na.rm = T),
+    Q75 = quantile(value, probs = 0.75, na.rm = T),
+    Q95 = quantile(value, probs = 0.95, na.rm = T),
+    Q99 = quantile(value, probs = 0.99, na.rm = T),
+    max = max(value, na.rm = T)
+  ) %>%
+  kable(caption = "Predicted block-level PNC (pt/cm3)", 
+        digits = 0, format.args = list(big.mark=",")) %>%
+  kable_styling() 
 
 ```
 
@@ -199,7 +215,7 @@ ufp_2010 %>%
   ggplot() + 
   geom_sf(data = states, fill=alpha(0.01)) +
   geom_sf_text(data = states, aes(label=STUSPS)) +
-  geom_sf(aes(col=winsorized), alpha=0.4, size=0.5) + 
+  geom_sf(aes(col=winsorized), alpha=0.4, size=0.2) + 
   labs(title = "Map of blocks with winsorized UFP predictions")
 
 ```
@@ -210,11 +226,13 @@ ufp_2010 %>%
   left_join(select(fips_codes, -contains("county")) %>% distinct(), by="state_code") %>%
   group_by(year, state_name) %>%
   summarize(
-    no_blocks=n(),
+    total_blocks=n(),
     proportion_winsorized = mean(winsorized, na.rm = T)) %>%
   arrange(-proportion_winsorized) %>%
-  kable(caption = "Proportion of blocks with winsorized UFP predictions") %>%
-  kable_styling()
+  kable(caption = "Blocks with winsorized UFP predictions", 
+        digits = 2) %>%
+  kable_styling() %>% 
+ scroll_box(height = "500px")
 
 
 ```
