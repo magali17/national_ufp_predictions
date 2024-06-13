@@ -19,7 +19,7 @@ output_path <- file.path("output", "predictions", "original_model", "blocks", "m
 prediction_files <- list.files(input_path)
 quantile_files <- paste0("raw_quantiles_", prediction_files)
 
-use_cores <- 4 #6 is slow during winsorizing???
+use_cores <- 1 #4 works in brain #6 is slow during winsorizing???
 
 ####################################################################
 testing_mode <- FALSE
@@ -31,9 +31,9 @@ override_winsorized_file <- TRUE
 ####################################################################
 
 # winsorizing thresholds
-low_quantile <- 0.02
+low_quantile <- 0.01#0.02
 ## results in max conc ~25k pt/cm3. Saha paper & block prediction max is ~26,579. anything higher produces much higher conc's (99th quantile ~105k)
-high_quantile <- 0.98
+high_quantile <- 0.99#0.98
 #winsorizing_label <- paste0(low_quantile, high_quantile, sep="_")
 ####################################################################
 # CALCULATE DATASET QUANTILES FOR WINSORIZING
@@ -45,7 +45,7 @@ lapply(c(quantile_files), function(f){
   
   if(!file.exists(this_quantile_file) | 
      override_quantile_file == TRUE) {
-    
+    message("generating new quantile file")
     message("reading in raw UFP prediction file")
     predictions <- readRDS(file.path(input_path, gsub("raw_quantiles_", "", f))) 
     quantile_list <-seq(0, 1, 0.01)
@@ -53,7 +53,7 @@ lapply(c(quantile_files), function(f){
     if(testing_mode==TRUE){
       message("...testing mode")
       predictions <- predictions[1:100,]
-      quantile_list <- c(0.02, 0.98)
+      quantile_list <- c(0.01, 0.99)
       }
     
     message(paste("calculating UFP quantiles"))
@@ -68,8 +68,7 @@ lapply(c(quantile_files), function(f){
     message(paste("...saving UFP quantile file", this_quantile_file))
     saveRDS(ufp_quantiles, this_quantile_file)
   } else{
-    message(paste("reading in existing UFP quantiles:", this_quantile_file))
-    ufp_quantiles <- readRDS(this_quantile_file)
+    message("using existing quantile file")
   }
 })
 
@@ -80,7 +79,7 @@ lapply(c(quantile_files), function(f){
 # blocks that were dropped have a slightly different distribution, with the largest discrepancy being that blocks dropped on average had higher predictions, but not always
 # we want predictions for these locations b/c we have ECHO participants living in these areas 
 
-message("winsorizing predictions")
+message("winsorizing predictions...")
 
 # --> make into fn to output serveral quantile estimaets?
 
