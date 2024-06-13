@@ -1,5 +1,5 @@
 # Script winsorizes extreme UFP predictions using 2010 & 2020 covariates
-# output is here: output/predictions/original_model/blocks/modified 
+# output is here: output/winsorize and output/predictions/original_model/blocks/modified 
 
 ####################################################################
 # SETUP
@@ -23,7 +23,7 @@ use_cores <- 4 #6 is slow during winsorizing???
 
 ####################################################################
 testing_mode <- FALSE
-override_quantile_file <- TRUE # TRUE if e.g., updating missing block covariates
+override_quantile_file <- FALSE # TRUE if e.g., updating missing block covariates
 override_winsorized_file <- TRUE
 
 ####################################################################
@@ -82,6 +82,8 @@ lapply(c(quantile_files), function(f){
 
 message("winsorizing predictions")
 
+# --> make into fn to output serveral quantile estimaets?
+
 # f=prediction_files[2]
 mclapply(prediction_files, mc.cores = use_cores, function(f) {
   
@@ -115,4 +117,7 @@ mclapply(prediction_files, mc.cores = use_cores, function(f) {
   
 })
 
- 
+####################################################################
+# DONE
+####################################################################
+message("DONE WITH 1b_winsorize_predictions.R")

@@ -3,6 +3,8 @@ title: "UFP predictions from the original Saha et al. 2021 Model"
 author: "Magali Blanco"
 date: "`r Sys.Date()`"
 output: html_document
+editor_options: 
+  chunk_output_type: console
 ---
 
 # Notes
@@ -30,45 +32,136 @@ if (!is.null(sessionInfo()$otherPkgs)) {
            detach, character.only=TRUE, unload=TRUE, force=TRUE))
 }
 
-pacman::p_load(tidyverse#, sf
+pacman::p_load(tidyverse, sf,
+               knitr, kableExtra
                )  
 
 # ggplot settings
 theme_set(theme_bw())
 theme_update(legend.position = "bottom")
 
+set.seed(1)
+##################################################################################################
+# speed thigns up
+testing_mode <- TRUE #TRUE #e.g., reduce visit designs & windows/quantile combinations
 
 ##################################################################################################
 # VARIABLES
 ##################################################################################################
-project_crs <- 4326  #lat/long
-
-# speed thigns up
-testing_mode <- FALSE #TRUE #e.g., reduce visit designs & windows/quantile combinations
+project_crs <- 4269 #lat/long CRS commonly used in US 
 
 
 ##################################################################################################
 # LOAD DATA
 ##################################################################################################
 # quantile summary files
-ufp_quantiles_2010 <- readRDS(file.path("output", "winsorize", "raw_quantiles_ufp_covs_2010.rds"))
-ufp_quantiles_2020 <- readRDS(file.path("output", "winsorize", "raw_quantiles_ufp_covs_2020.rds"))
+ufp_quantiles_2010 <- readRDS(file.path("output", "winsorize", "raw_quantiles_ufp_covs_2010.rds")) %>%
+  mutate(year=2010)
+
+ufp_quantiles_2020 <- readRDS(file.path("output", "winsorize", "raw_quantiles_ufp_covs_2020.rds")) %>%
+  mutate(year=2020) 
+
 
 # raw UFP predictions
-ufp_2010 <- readRDS(file.path("output", "predictions", "original_model", "blocks", "raw", "ufp_covs_2010.rds"))
-ufp_2020w <- readRDS(file.path("output", "predictions", "original_model", "blocks", "raw", "ufp_covs_2020.rds"))
+#ufp_2010_original <- readRDS(file.path("output", "predictions", "original_model", "blocks", "raw", "ufp_covs_2010.rds"))
+# ufp_2020_original <- readRDS(file.path("output", "predictions", "original_model", "blocks", "raw", "ufp_covs_2020.rds"))
 
 # winsorized predictions
-ufp_2010w <- readRDS(file.path("output", "predictions", "original_model", "blocks", "modified", "ufp_covs_2010.rds"))
-ufp_2020w <- readRDS(file.path("output", "predictions", "original_model", "blocks", "modified", "ufp_covs_2020.rds"))
+ufp_2010 <- readRDS(file.path("output", "predictions", "original_model", "blocks", "modified", "ufp_covs_2010.rds")) %>%
+  rename(ufp_original=ufp) %>%
+  mutate(year=2010)
+
+if(testing_mode==TRUE){
+  ufp_2010 <- slice_sample(ufp_2010, n = 1e3)
+  }
+
+# ufp_2020 <- readRDS(file.path("output", "predictions", "original_model", "blocks", "modified", "ufp_covs_2020.rds"))  %>%
+#   rename(ufp_original_ufp=ufp) %>%
+#   mutate(year=2010)
+
+
 
 
 ```
 
-
+# --> add census block? 
 
 ```{r}
+# study_counties <- c("King County", "Snohomish County", "Pierce County", "Kitsap County", "Island County")
+# 
+# tract_path <- file.path("data", "raw", "wa_kc_census_tracts.rda")
+# if(file.exists(tract_path)) {
+#   tracts0 <- readRDS(tract_path)
+# } else {
+#   tracts0 <- tracts(state = "WA", county = study_counties, year=yr) %>%
+#     filter(ALAND!=0) %>%
+#     st_transform(crs = lat_long_crs) 
+#   saveRDS(tracts0, tract_path)
+# }
 
 
 ```
+
+
+
+
+
+# quantile summary
+
+--> currently winsorizing at Q 2% and 98% 
+
+```{r}
+bind_rows(ufp_quantiles_2010, ufp_quantiles_2020) %>%
+  filter(quantile %in% c(0.02,0.98,
+                         0.01, 0.99
+                         )) %>%
+  select(year, everything()) %>%
+  mutate(conc = round(conc),
+         year = as.character(year)) %>%
+  kable(caption = "Quantiles used to winsorize year-specific predictions",
+        format.args = list(big.mark=",")) %>%
+  kable_styling()
+
+
+```
+
+
+
+# compare original & winsorized UFP predictions 
+
+histogram 
+
+```{r}
+ufp_2010 %>%
+  select(block_key, contains("ufp")) %>%
+  pivot_longer(cols=contains("ufp")) %>%
+  
+  ggplot(aes(x=value, fill=name)) + 
+  geom_histogram(position = "dodge")
+
+# # scatterplot
+# ufp_2010 %>%
+#   ggplot(aes(x=ufp_original, y=ufp_winsorized, col=winsorized)) + 
+#   geom_abline(slope = 1, intercept = 0, linetype=2, alpha=0.5) +
+#   geom_point(alpha=0.1)  
+
+```
+
+map of winsorized vs non-winsorized
+
+# --> ERROR: lat/long are wrong 
+
+```{r}
+ufp_2010 %>%
+  st_as_sf(coords = c('long_block', 'lat_block'), crs=project_crs) %>%
+  
+  ggplot(aes(col=winsorized)) + 
+  geom_sf()
+
+
+
+```
+
+
+
 
