@@ -27,6 +27,8 @@ lapply(c("input",
          output_path,
         file.path("output", "predictions", "original_model", "blocks", "modified"),
          file.path("output", "qc"),
+        file.path("output", "other"),
+        file.path("output", "summary"),
          file.path("output", "winsorize")
          ), 
        function(x) {if(!dir.exists(x)){dir.create(x, recursive = T)}})
