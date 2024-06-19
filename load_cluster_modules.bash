@@ -11,6 +11,7 @@ module load UDUNITS/udunits-2.2.26
 
 module load R/R-4.2.2
 module load R/rstudio-1.2.1335
+module load pandoc
 
 # next, enter "rstudio" into the terimal if you wish to open an interactive session
 

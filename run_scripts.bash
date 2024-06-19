@@ -6,4 +6,4 @@ Rscript 1b_winsorize_predictions.R
 
 
 ## knit markdown with results 
-# Rscript -e 'rmarkdown::render("9_summarize_epi.Rmd", "html_document")'
+# Rscript -e 'rmarkdown::render("2_summary.Rmd", "html_document")'
