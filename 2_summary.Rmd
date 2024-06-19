@@ -234,8 +234,7 @@ maps of original (pre-winsorization) UFP predictions, winsorized predictions, an
 ```{r}
 ufp_prediction_types <- grep("ufp", names(ufp), value = T)
 
-#--> TEMP
-# ufp_type = ufp_prediction_types[1]
+# ufp_type = ufp_prediction_types[3]
 lapply(ufp_prediction_types, function(ufp_type){
   
   temp <- ufp  
@@ -258,16 +257,13 @@ lapply(ufp_prediction_types, function(ufp_type){
     geom_sf(aes(col=value), #alpha=0.1, 
             size=0.05) + 
     facet_wrap(~name) +
-    scale_color_viridis_c(
-      #trans="log", #breaks=log(c(2e3, 10e3))
-      ) +
+    scale_color_viridis_c(trans="log10") +
     #scale_color_gradient2(midpoint = 30)
-    
-    labs(col="PNC (1k pt/cm3)")
+    labs(col="PNC (10^3 pt/cm3)")
   
-  if(ufp_type=="ufp_difference"){
-    p <- p + scale_color_gradient2(low = "red", high = "blue")
-  }
+  # if(ufp_type=="ufp_difference"){
+  #   p <- p + scale_color_gradient2(low = "red", high = "blue")
+  # }
 
   p
   
