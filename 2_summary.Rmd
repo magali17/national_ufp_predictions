@@ -240,7 +240,7 @@ lapply(ufp_prediction_types, function(ufp_type){
   
   temp <- ufp  
   
-  if(ufp_type="ufp_difference"){
+  if(ufp_type=="ufp_difference"){
     temp <- filter(ufp, winsorized != "not changed")
     }
   
@@ -258,7 +258,9 @@ lapply(ufp_prediction_types, function(ufp_type){
     geom_sf(aes(col=value), #alpha=0.1, 
             size=0.05) + 
     facet_wrap(~name) +
-    scale_color_viridis_c() +
+    scale_color_viridis_c(
+      #trans="log", #breaks=log(c(2e3, 10e3))
+      ) +
     #scale_color_gradient2(midpoint = 30)
     
     labs(col="PNC (1k pt/cm3)")
