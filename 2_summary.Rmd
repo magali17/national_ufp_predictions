@@ -53,7 +53,7 @@ theme_update(legend.position = "bottom")
 set.seed(1)
 ##################################################################################################
 # speed thigns up
-testing_mode <- FALSE #TRUE #e.g., reduce visit designs & windows/quantile combinations
+testing_mode <- TRUE #TRUE #e.g., reduce visit designs & windows/quantile combinations
 
 ##################################################################################################
 # VARIABLES
@@ -79,7 +79,9 @@ ufp_2010 <- readRDS(file.path("output", "predictions", "original_model", "blocks
   mutate(year=2010)
 
 if(testing_mode==TRUE){
-  ufp_2010 <- slice_sample(ufp_2010, n = 1e3)
+  ufp_2010 <- slice_sample(ufp_2010, #n = 1e3
+                            n=5e6
+                           )
   }
 
 # ufp_2020 <- readRDS(file.path("output", "predictions", "original_model", "blocks", "modified", "ufp_covs_2020.rds"))  %>%
