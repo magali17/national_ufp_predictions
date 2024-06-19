@@ -53,7 +53,7 @@ theme_update(legend.position = "bottom")
 set.seed(1)
 ##################################################################################################
 # speed thigns up
-testing_mode <- TRUE #TRUE #e.g., reduce visit designs & windows/quantile combinations
+testing_mode <- FALSE #TRUE #e.g., reduce visit designs & windows/quantile combinations
 
 ##################################################################################################
 # VARIABLES
