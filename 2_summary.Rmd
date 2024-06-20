@@ -1,7 +1,7 @@
 ---
 title: "Block-level UFP predictions - Slightly modified from the original Saha et al. 2021 Model"
 author: "Magali Blanco"
-date: "`r Sys.Date()`"
+date: "`r Sys.time()`"
 output:
   html_document:
     df_print: paged
