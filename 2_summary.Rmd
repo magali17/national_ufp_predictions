@@ -151,7 +151,7 @@ these blocks have missing predictions due to missing model covariates
 ```{r}
 # this_year=years[1]
 lapply(years, function(this_year){
-  ufp %>%
+  p <- ufp %>%
     filter(year==this_year) %>%
     mutate(missing_imp_a00750 = ifelse(is.na(imp_a00750), "missing imp_a00750", "UFP prediction available" )) %>%
     filter(missing_imp_a00750 == "missing imp_a00750") %>%
@@ -164,8 +164,11 @@ lapply(years, function(this_year){
     labs(title = "Blocks with missing covariates (i.e., predictions)",
          subtitle = this_year)
   
+  p
+  
   ggsave(file.path("output", "summary", paste0("missing_predictions_", this_year, ".png")), width = 16, height = 10)
 
+  print(p)
 })
 
 ```
@@ -293,9 +296,11 @@ lapply(ufp_prediction_types, function(ufp_type){
   #   p <- p + scale_color_gradient2(low = "red", high = "blue")
   # }
 
-  p
   
+  p
   ggsave(file.path("output", "summary", paste0("predictions_", ufp_type, ".png")), width = 16, height = 10)
+  
+  print(p)
   
   })
 
@@ -325,7 +330,7 @@ lapply(years, function(this_year){
   
     ggsave(file.path("output", "summary", paste0("dichotimized_winsorized_predictions", this_year, ".png")), width = 16, height = 10)
 
-  
+  print(p)
 })
 
 ```
