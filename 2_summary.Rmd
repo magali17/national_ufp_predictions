@@ -257,7 +257,7 @@ maps of original (pre-winsorization) UFP predictions, winsorized predictions, an
 
 ufp_prediction_types <- grep("ufp", names(ufp), value = T)
 
-# ufp_type = ufp_prediction_types[2]
+# ufp_type = ufp_prediction_types[3]
 lapply(ufp_prediction_types, function(ufp_type){
   
   temp <- ufp  
