@@ -120,15 +120,20 @@ data(fips_codes)
 
 # urban areas
 ## include both "urbanized areas," which are densely developed areas with a population of at least 50,000, and "urban clusters," which have a population of greater than 2,500 but less than 50,000
-some_urban_areas <- urban_areas() %>%
+urban_areas_file <- file.path("output", "other", "urban_areas.rda")
+if(!file.exists(urban_areas_file)) {
+  some_urban_areas <- urban_areas()
+  saveRDS(some_urban_areas, urban_areas_file)
+}
+
+some_urban_areas <- readRDS(urban_areas_file) %>%
   filter(grepl("Urbanized Area", NAMELSAD10)) %>%
   mutate(NAME10 = gsub(", .*", "", NAME10)) %>%
   #?? some lare areas
   arrange(desc(ALAND10)) %>%
   slice(1:40)
 
-metro_areas <- metro_divisions()
-
+#metro_areas <- metro_divisions()
 # places_test <- places() # error
 # test_statistical_area <- combined_statistical_areas()
 
