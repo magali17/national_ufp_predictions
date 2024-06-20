@@ -53,7 +53,7 @@ theme_update(legend.position = "bottom")
 set.seed(1)
 ##################################################################################################
 # speed thigns up
-testing_mode <- FALSE #TRUE #e.g., reduce visit designs & windows/quantile combinations
+testing_mode <- TRUE #TRUE #e.g., reduce visit designs & windows/quantile combinations
 
 ##################################################################################################
 # VARIABLES
@@ -97,6 +97,10 @@ ufp <- rbind(ufp_2010 #, ufp_2020
                                    ifelse(ufp_difference>0, "prediction increased", "not changed")
                                    )
          )
+
+##################################################################################################
+# original model fit
+lm_fit <- readRDS(file.path("..", "Saha 2021 model", "ufp_model", "data", "modified", "lm_fit.rda"))
 
 ##################################################################################################
 # census data
@@ -164,9 +168,8 @@ lapply(years, function(this_year){
     labs(title = "Blocks with missing covariates (i.e., predictions)",
          subtitle = this_year)
   
-  p
-  
-  ggsave(file.path("output", "summary", paste0("missing_predictions_", this_year, ".png")), width = 16, height = 10)
+  ggsave(file.path("output", "summary", paste0("missing_predictions_", this_year, "TEST.png")), 
+         plot = p, width = 16, height = 10)
 
   print(p)
 })
@@ -296,9 +299,8 @@ lapply(ufp_prediction_types, function(ufp_type){
   #   p <- p + scale_color_gradient2(low = "red", high = "blue")
   # }
 
-  
-  p
-  ggsave(file.path("output", "summary", paste0("predictions_", ufp_type, ".png")), width = 16, height = 10)
+  ggsave(file.path("output", "summary", paste0("predictions_", ufp_type, ".png")), 
+         plot = p, width = 16, height = 10)
   
   print(p)
   
@@ -310,7 +312,7 @@ lapply(ufp_prediction_types, function(ufp_type){
 ```{r}
 # this_year=years[1]
 lapply(years, function(this_year){
-  ufp %>%
+  p <- ufp %>%
     filter(year==this_year,
            #winsorized==TRUE
            winsorized != "not changed"
@@ -328,7 +330,8 @@ lapply(years, function(this_year){
     labs(title = "blocks with winsorized UFP predictions",
          subtitle = this_year)
   
-    ggsave(file.path("output", "summary", paste0("dichotimized_winsorized_predictions", this_year, ".png")), width = 16, height = 10)
+    ggsave(file.path("output", "summary", paste0("dichotimized_winsorized_predictions", this_year, ".png")), 
+           plot = p, width = 16, height = 10)
 
   print(p)
 })
@@ -356,6 +359,17 @@ Note: we may want to do this same winsorized location check with the actual coho
 
 
 ## covariates associated with winsorization
+
+original model fit 
+* m_to_truck has the largest weight    
+  * hard to interpret since covariates are not standardized? 
+
+```{r}
+
+summary(lm_fit)
+
+```
+
 
 * places closer to truck routes  (m_to_truck is the inverse) are are most likely to be winsorized  
 
