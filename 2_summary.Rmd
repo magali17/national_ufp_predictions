@@ -54,7 +54,7 @@ theme_update(legend.position = "bottom")
 set.seed(1)
 ##################################################################################################
 # speed thigns up
-testing_mode <- TRUE #TRUE #e.g., reduce visit designs & windows/quantile combinations
+testing_mode <- FALSE #TRUE #e.g., reduce visit designs & windows/quantile combinations
 
 ##################################################################################################
 # VARIABLES
@@ -160,10 +160,29 @@ some_urban_areas <- readRDS(urban_areas_file) %>%
 # places_test <- places() # error
 # test_statistical_area <- combined_statistical_areas()
 
+# QC - check some predictions in Seattle
+block_file <- file.path("output", "other", "king_county_blocks.rda")
+if(file.exists(block_file)) {
+  king_county_blocks <- readRDS(block_file)
+  } else{
+    king_county_blocks <- blocks(state = "WA" , county = c("King County", "Snohomish County"),year = 2010)  
+    saveRDS(king_county_blocks, block_file)
+  }
+# test - NY
+block_file <- file.path("output", "other", "new_york_blocks.rda")
+if(file.exists(block_file)) {
+  ny_blocks <- readRDS(block_file)
+  } else{
+    ny_blocks <- blocks(state = "NY", #county = c("New York"),
+                        year = 2010)  
+    saveRDS(ny_blocks, block_file)
+  }
+
 ##################################################################################################
 # COMMON VARIABLES
 ##################################################################################################
 years <- unique(ufp$year)
+all_prediction_types <- unique(ufp$winsorized) %>% setdiff(NA)
 
 ##################################################################################################
 # FUNCTIONS
@@ -173,7 +192,7 @@ years <- unique(ufp$year)
 # id="block_key"
 # y.= filter(some_urban_areas, NAME10=="Seattle")
 
-areas_overlap <- function(x., y., id) {
+areas_overlap <- function(x., y., x_id) {
  
   intersects <- x. %>% 
     #st_transform(crs = utm_zone10_crs) %>%
@@ -182,7 +201,7 @@ areas_overlap <- function(x., y., id) {
     pull(row.id)
   
   x.[intersects,] %>% 
-    select(id)  
+    select(all_of(x_id))
 }
 
 
@@ -244,6 +263,9 @@ ggsave(file.path("output", "summary", paste0("covariates_vs_winsorization_predic
 
 ```
 
+* **modeling data was at least 32 m from m_to_truck. prediction locations can be as close as 1 m**
+
+
 ```{r}
 # modeling covariates & block prediction covariates
 compare <- ufp %>%
@@ -279,6 +301,9 @@ compare %>%
   geom_histogram(position = "dodge") +
   scale_x_log10() +
   labs(subtitle = "x-axis is on the log10 scale (drops values<=0)")
+
+ggsave(file.path("output", "summary", paste0("covariates_histograms.png")), width = 12, height = 10)
+
 
 # histogram of m_to_truck alone
 compare %>%
@@ -319,23 +344,112 @@ modeling_data0 %>%
   geom_smooth(method="lm", se=F,col="black") #+
   #stat_cor(aes(label = after_stat(r.label)))
 
+ggsave(file.path("output", "summary", paste0("covariates_vs_ufp_observations.png")), width = 14, height = 10)
+
 
 ```
 
-# --> START HERE
 
 ID some very high block predictions; are these on/very near roads? seattle example? 
 
+* high predictions tend to be on major roadways
+
 ```{r}
-high_ufp <- ufp %>%
-  filter(winsorized=="prediction reduced") %>%
-  st_as_sf(coords = c('long_block', 'lat_block'), crs=project_crs)
+# x_min=NA
+# x_max=NA
+# y_min=NA
+# y_max=NA
 
-seattle <- some_urban_areas %>%
-  filter(NAME10=="Seattle")  
+# x_min = -122.29
+# x_max = -122.2
+# y_min = 47.57
+# y_max = 47.61
+# location="Seattle"
+# predictions = c("not changed", "prediction reduced", "prediction increased")
 
+# function maps high predictions vs block areas in a localized area
+map_locations <- function(x_min=NA, x_max=NA, y_min=NA, y_max=NA, 
+                          location="Seattle", block_file = king_county_blocks,
+                          #predictions = c("not changed", "prediction reduced", "prediction increased")
+                          predictions = c("prediction reduced")
+                          ) {
+  
+  # use entire area if not provided
+  if(is.na(y_min)){y_min <- min(ufp$lat_block)}
+  if(is.na(y_max)){y_max <- max(ufp$lat_block)}
+  if(is.na(x_min)){x_min <- min(ufp$long_block)}
+  if(is.na(x_max)){x_max <- max(ufp$long_block)}
+  
+  local_area <- filter(some_urban_areas, grepl(location, NAME10)) %>%
+    # make into multi-point 
+    summarize() %>%
+    # take the outline
+    st_convex_hull() 
+  
+  high_seattle_ufp <- ufp %>%
+  filter(winsorized %in% predictions,
+         # local_area can get reduced further
+         (long_block >= x_min & long_block <= x_max),
+         (lat_block >= y_min & lat_block <= y_max)) %>%
+  st_as_sf(coords = c('long_block', 'lat_block'), crs=project_crs) %>%
+  # only keep predictions in a small area
+  areas_overlap(x. = .,
+                y. = local_area, #filter(some_urban_areas, NAME10==location),
+                x_id = "block_key") %>%
+  left_join(ufp, by="block_key")
 
-areas_overlap(x. = high_ufp, y. = seattle)
+  # outline of the area of interest
+  local_area2 <- high_seattle_ufp %>%
+    # make into multi-point
+    summarize() %>%
+    # take the outline
+    st_convex_hull()
+
+  # blocks in the area 
+  seattle_blocks <- areas_overlap(x.=block_file,
+                                  #y.=local_area,
+                                  y.=local_area2,
+                                  x_id = "GEOID10") %>%
+    left_join(st_drop_geometry(block_file))
+
+  ggplot() + 
+    geom_sf(data = seattle_blocks, fill=NA) +
+    geom_sf(data = high_seattle_ufp, aes(col=ufp_original)) +
+    facet_wrap(~winsorized) +
+    scale_color_viridis_c(trans="log10")  +
+    labs(title = "High predictions reduced through winsorization and block locations")  
+  
+}
+##################################################################################################
+# SEATTLE
+############################################
+# seattle - predictions reduced are mostly along/right on highways
+map_locations()
+ggsave(file.path("output", "summary", paste0("seattle_high_ufp_example1.png")), width = 8, height = 10)
+
+# smaller areas
+map_locations(x_min = -122.4, x_max = -122.2, y_min = 47.55, y_max = 47.65, 
+              predictions = all_prediction_types)
+ggsave(file.path("output", "summary", paste0("seattle_high_ufp_example2.png")), width = 10, height = 6)
+
+## very small
+map_locations(x_min = -122.29, x_max = -122.2, y_min = 47.57, y_max = 47.61, 
+              predictions = all_prediction_types)
+ggsave(file.path("output", "summary", paste0("seattle_high_ufp_example3.png")), width = 10, height = 6)
+
+##################################################################################################
+# MANHATTAN
+############################################
+map_locations(location = "New York", block_file = ny_blocks, 
+              x_min=-74, x_max=-73.5, y_min=40.5, y_max=41.4)
+ggsave(file.path("output", "summary", paste0("ny_high_ufp_example1.png")), width = 10, height = 6)
+
+# closer look
+map_locations(location = "New York", block_file = ny_blocks, 
+              x_min=-74.00, x_max=-73.9, y_min=40.7, y_max=40.76, 
+              predictions = all_prediction_types)
+ggsave(file.path("output", "summary", paste0("ny_high_ufp_example2.png")), width = 10, height = 6)
+
 
 ```
 
