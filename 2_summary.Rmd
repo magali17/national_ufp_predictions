@@ -43,7 +43,7 @@ if (!is.null(sessionInfo()$otherPkgs)) {
 
 pacman::p_load(tidyverse, sf,
                knitr, kableExtra,
-               ggpubr, # stat_cor()
+               #ggpubr, # stat_cor() # errors out in brain
                #ggrepel, # geom_text_repel()
                tigris)  
 
@@ -316,8 +316,8 @@ modeling_data0 %>%
   geom_point(alpha=0.3, aes(#col=city_id, #shape=site_type
                             )) +  #site_loc
   geom_smooth() + 
-  geom_smooth(method="lm", se=F,col="black") +
-  stat_cor(aes(label = after_stat(r.label)))
+  geom_smooth(method="lm", se=F,col="black") #+
+  #stat_cor(aes(label = after_stat(r.label)))
 
 
 ```
