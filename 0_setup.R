@@ -29,7 +29,8 @@ lapply(c("input",
          file.path("output", "qc"),
         file.path("output", "other"),
         file.path("output", "summary"),
-         file.path("output", "winsorize")
+         file.path("output", "winsorize"),
+        "original_model_fit"
          ), 
        function(x) {if(!dir.exists(x)){dir.create(x, recursive = T)}})
 

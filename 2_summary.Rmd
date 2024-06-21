@@ -43,6 +43,7 @@ if (!is.null(sessionInfo()$otherPkgs)) {
 
 pacman::p_load(tidyverse, sf,
                knitr, kableExtra,
+               ggpubr, # stat_cor()
                #ggrepel, # geom_text_repel()
                tigris)  
 
@@ -67,13 +68,20 @@ project_crs <- 4269 #lat/long CRS commonly used in US
 # LOAD DATA
 ##################################################################################################
 # original model fit
-lm_fit <- readRDS(file.path("..", "Saha 2021 model", "ufp_model", "data", "modified", "lm_fit.rda"))
+lm_fit <- readRDS(file.path("original_model_fit", "lm_fit.rda"))
 
 modeling_cov <- names(lm_fit$coefficients) %>% setdiff("(Intercept)")
 
 ##################################################################################################
 # model fit data
-modeling_data <- read.csv(file.path("..", "Saha 2021 model", "ufp_model", "data", "modified", "input_used.csv")) %>%
+location_info <- read.csv(file.path("original_model_fit", "pnc_lur_input_1km_intra_urban.csv")) %>%
+  select(data_id, city_id, site_loc, site_type, data_year)
+
+
+modeling_data0 <- read.csv(file.path("original_model_fit", "input_used.csv")) %>% 
+  left_join(location_info, by=c("data_id", "city_id"))
+
+modeling_data <- modeling_data0  %>%
   select(id= data_id, lat, long, all_of(modeling_cov), pnc=PNC) %>%
   mutate(data_type="modeling")
 
@@ -157,11 +165,87 @@ some_urban_areas <- readRDS(urban_areas_file) %>%
 ##################################################################################################
 years <- unique(ufp$year)
 
+##################################################################################################
+# FUNCTIONS
+##################################################################################################
+# function returns areas within the study area
+# x.=high_ufp
+# id="block_key"
+# y.= filter(some_urban_areas, NAME10=="Seattle")
+
+areas_overlap <- function(x., y., id) {
+ 
+  intersects <- x. %>% 
+    #st_transform(crs = utm_zone10_crs) %>%
+    st_intersects(x =., y=y.) %>% 
+    as.data.frame() %>%
+    pull(row.id)
+  
+  x.[intersects,] %>% 
+    select(id)  
+}
+
+
+##################################################################################################
+
 ```
 
 # covariates
 
+covariates associated with winsorization
+
+original model fit 
+* m_to_truck has the largest weight    
+  * hard to interpret since covariates are not standardized? 
+
 ```{r}
+
+summary(lm_fit)
+
+```
+
+
+* places closer to truck routes  (m_to_truck is the inverse) are are most likely to be winsorized  
+
+```{r}
+ufp %>%
+  mutate(m_to_truck_native_scale = 1/m_to_truck) %>%
+  pivot_longer(cols = c(all_of(modeling_cov), contains("m_to_truck"))) %>%
+  ggplot(aes(x=value, y=ufp_difference)) +
+  facet_wrap(~year+name, scales="free_x") +
+  geom_smooth() +
+  geom_point(aes(col=winsorized), alpha=0.3) + 
+  labs(y="UFP adjustment after winsorization",
+       x= "covariate value",
+       col="Prediction",
+       title = "covariates associated with winsorization"
+       )
+
+ggsave(file.path("output", "summary", paste0("covariates_vs_winsorization.png")), width = 16, height = 10)
+
+# same as above just for high predictions
+ufp %>%
+  filter(winsorized == "prediction reduced") %>%
+  mutate(m_to_truck_native_scale = 1/m_to_truck) %>%
+  pivot_longer(cols = c(all_of(modeling_cov), contains("m_to_truck"))) %>%
+  ggplot(aes(x=value, y=ufp_difference)) +
+  facet_wrap(~year+name, scales="free_x") +
+  geom_hline(yintercept = 0, linetype=2, alpha=0.5) +
+  geom_smooth(se=F) +
+  geom_point(aes(col=winsorized), alpha=0.3) + 
+  labs(y="UFP adjustment after winsorization",
+       x= "covariate value",
+       col="Prediction",
+       title = "predictions reduced by covariate",
+       subtitle = "predictions decreased through winsorizaiton (i.e., very high predictions)"
+       )
+
+ggsave(file.path("output", "summary", paste0("covariates_vs_winsorization_predictins_reduced.png")), width = 16, height = 10)
+
+```
+
+```{r}
+# modeling covariates & block prediction covariates
 compare <- ufp %>%
   rename(id=block_key, lat=lat_block, long=long_block, pnc=ufp_original) %>%
   mutate(data_type="prediction") %>%
@@ -194,13 +278,9 @@ compare %>%
   facet_wrap(~name, scales="free") +
   geom_histogram(position = "dodge") +
   scale_x_log10() +
-  labs( 
-       subtitle = "x-axis is on the log10 scale (drops values<=0)"
-       )
+  labs(subtitle = "x-axis is on the log10 scale (drops values<=0)")
 
-
-# histogram of m_to_truck
-
+# histogram of m_to_truck alone
 compare %>%
   filter(grepl("m_to_truck", name)) %>%
   ggplot(aes(x=value, fill=data_type)) + 
@@ -215,22 +295,50 @@ compare %>%
 
 modeling data: PNC vs distance to truck
 
+* things are more linear for log m_to_truck
+
+* lu_resi has groupings by city/type of sampilng 
+
+--> fit the model w/ log_m_to_truck to see if fewer extremes are predicted? likely will still get some extreme valeus
+
 ```{r}
-compare %>%
-  filter(data_type=="modeling") %>%
-  # put on the modeling scale
-  mutate(#value = ifelse(name=="m_to_truck", 1/value, value)
-         value = ifelse(grepl("m_to_truck", name), log(value), value),
-         name = ifelse(grepl("m_to_truck", name), paste0("log_", name), value),
+modeling_data0 %>%
+  select(id= data_id, city_id, site_loc, site_type, data_year, lat, long, all_of(modeling_cov), pnc=PNC) %>%  
+  mutate(m_to_truck_native_scale = 1/m_to_truck,
+         m_to_truck_log = log(m_to_truck),
+         m_to_truck_native_scale_log = log(m_to_truck_native_scale),
+         city_id = as.factor(city_id)
          ) %>%
+  pivot_longer(cols=c(all_of(modeling_cov), contains("m_to_truck"))) %>%
   
   ggplot(aes(x=value, y=pnc)) + 
   facet_wrap(~name, scales="free", switch="x") + 
-  geom_point(alpha=0.3) + 
-  geom_smooth() #+ geom_smooth(method="lm", se=F,col="black") 
+  geom_point(alpha=0.3, aes(#col=city_id, #shape=site_type
+                            )) +  #site_loc
+  geom_smooth() + 
+  geom_smooth(method="lm", se=F,col="black") +
+  stat_cor(aes(label = after_stat(r.label)))
 
 
 ```
+
+# --> START HERE
+
+ID some very high block predictions; are these on/very near roads? seattle example? 
+
+```{r}
+high_ufp <- ufp %>%
+  filter(winsorized=="prediction reduced") %>%
+  st_as_sf(coords = c('long_block', 'lat_block'), crs=project_crs)
+
+seattle <- some_urban_areas %>%
+  filter(NAME10=="Seattle")  
+
+
+areas_overlap(x. = high_ufp, y. = seattle)
+
+```
+
 
 
 
@@ -444,37 +552,5 @@ ufp %>%
 Note: we may want to do this same winsorized location check with the actual cohort locations
 
 
-## covariates associated with winsorization
-
-original model fit 
-* m_to_truck has the largest weight    
-  * hard to interpret since covariates are not standardized? 
-
-```{r}
-
-summary(lm_fit)
-
-```
-
-
-* places closer to truck routes  (m_to_truck is the inverse) are are most likely to be winsorized  
-
-```{r}
-ufp %>%
-  pivot_longer(cols = c(lu_comm_p01500, lu_resi_p15000, imp_a00750, m_to_truck, ll_a1_a3_s03000)) %>%
-  ggplot(aes(x=value, y=ufp_difference)) +
-  facet_wrap(~year+name, scales="free") +
-  geom_smooth() +
-  geom_point(aes(col=winsorized), alpha=0.1, size=0.5) + 
-  labs(y="UFP adjustment after winsorization",
-       x= "covariate value",
-       col="Prediction",
-       title = "covariates associated with winsorization"
-       )
-
-ggsave(file.path("output", "summary", paste0("covariates_vs_winsorization.png")), width = 16, height = 10)
-
-
-```
 
  
