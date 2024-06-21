@@ -66,6 +66,20 @@ project_crs <- 4269 #lat/long CRS commonly used in US
 ##################################################################################################
 # LOAD DATA
 ##################################################################################################
+# original model fit
+lm_fit <- readRDS(file.path("..", "Saha 2021 model", "ufp_model", "data", "modified", "lm_fit.rda"))
+
+modeling_cov <- names(lm_fit$coefficients) %>% setdiff("(Intercept)")
+
+##################################################################################################
+# model fit data
+modeling_data <- read.csv(file.path("..", "Saha 2021 model", "ufp_model", "data", "modified", "input_used.csv")) %>%
+  select(id= data_id, lat, long, all_of(modeling_cov), pnc=PNC) %>%
+  mutate(data_type="modeling")
+
+
+#summary(ufp$m_to_truck)
+##################################################################################################
 # quantile summary files
 ufp_quantiles_2010 <- readRDS(file.path("output", "winsorize", "raw_quantiles_ufp_covs_2010.rds")) %>%
   mutate(year=2010)
@@ -79,7 +93,7 @@ ufp_2010 <- readRDS(file.path("output", "predictions", "original_model", "blocks
   mutate(year=2010)
 
 if(testing_mode==TRUE){
-  ufp_2010 <- slice_sample(ufp_2010, n = 1e4
+  ufp_2010 <- slice_sample(ufp_2010, n = 1e3
                             #n=1e6
                            )
   }
@@ -98,9 +112,6 @@ ufp <- rbind(ufp_2010 #, ufp_2020
                                    )
          )
 
-##################################################################################################
-# original model fit
-lm_fit <- readRDS(file.path("..", "Saha 2021 model", "ufp_model", "data", "modified", "lm_fit.rda"))
 
 ##################################################################################################
 # census data
@@ -147,6 +158,81 @@ some_urban_areas <- readRDS(urban_areas_file) %>%
 years <- unique(ufp$year)
 
 ```
+
+# covariates
+
+```{r}
+compare <- ufp %>%
+  rename(id=block_key, lat=lat_block, long=long_block, pnc=ufp_original) %>%
+  mutate(data_type="prediction") %>%
+  select(names(modeling_data)) %>%
+  rbind(modeling_data) %>%
+  # # put on the native scale!
+  mutate(m_to_truck_native_scale = 1/m_to_truck) %>%
+  pivot_longer(cols = c(all_of(modeling_cov), contains("truck")))
+
+compare %>%
+  group_by(name, data_type) %>%
+  summarize(
+    n=n(),
+    min=min(value),
+    median = median(value),
+    mean = mean(value),
+    max = max(value)
+  ) %>%
+  kable(caption = "distribution of modeling covariates in the modeling (observed) and prediction locations. m_to_truck is on the native scale",
+        digits=2
+        ) %>%
+  kable_styling()
+
+# histogram of all covariates
+compare %>%
+  # --> TEMP for plotting. drops values==0
+  mutate(value = ifelse(value==0, 1, value)) %>%
+  
+  ggplot(aes(x=value, fill=data_type)) + 
+  facet_wrap(~name, scales="free") +
+  geom_histogram(position = "dodge") +
+  scale_x_log10() +
+  labs( 
+       subtitle = "x-axis is on the log10 scale (drops values<=0)"
+       )
+
+
+# histogram of m_to_truck
+
+compare %>%
+  filter(grepl("m_to_truck", name)) %>%
+  ggplot(aes(x=value, fill=data_type)) + 
+  facet_wrap(~name, scales="free") +
+  geom_histogram(position = "dodge", )  +
+  scale_x_log10() + 
+  labs(x = "value",
+       subtitle = "x-axis is on the log10 scale"
+       )
+
+```
+
+modeling data: PNC vs distance to truck
+
+```{r}
+compare %>%
+  filter(data_type=="modeling") %>%
+  # put on the modeling scale
+  mutate(#value = ifelse(name=="m_to_truck", 1/value, value)
+         value = ifelse(grepl("m_to_truck", name), log(value), value),
+         name = ifelse(grepl("m_to_truck", name), paste0("log_", name), value),
+         ) %>%
+  
+  ggplot(aes(x=value, y=pnc)) + 
+  facet_wrap(~name, scales="free", switch="x") + 
+  geom_point(alpha=0.3) + 
+  geom_smooth() #+ geom_smooth(method="lm", se=F,col="black") 
+
+
+```
+
+
 
 # Blocks with missing predictions
 
@@ -391,4 +477,4 @@ ggsave(file.path("output", "summary", paste0("covariates_vs_winsorization.png"))
 
 ```
 
-
+ 
