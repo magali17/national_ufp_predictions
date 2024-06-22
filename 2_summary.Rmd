@@ -67,6 +67,8 @@ project_crs <- 4269 #lat/long CRS commonly used in US
 ##################################################################################################
 # LOAD DATA
 ##################################################################################################
+message("loading data")
+
 # original model fit
 lm_fit <- readRDS(file.path("original_model_fit", "lm_fit.rda"))
 
@@ -85,8 +87,6 @@ modeling_data <- modeling_data0  %>%
   select(id= data_id, lat, long, all_of(modeling_cov), pnc=PNC) %>%
   mutate(data_type="modeling")
 
-
-#summary(ufp$m_to_truck)
 ##################################################################################################
 # quantile summary files
 ufp_quantiles_2010 <- readRDS(file.path("output", "winsorize", "raw_quantiles_ufp_covs_2010.rds")) %>%
@@ -119,8 +119,6 @@ ufp <- rbind(ufp_2010 #, ufp_2020
                                    ifelse(ufp_difference>0, "prediction increased", "not changed")
                                    )
          )
-
-
 ##################################################################################################
 # census data
 ## 2013-2022 available
@@ -207,6 +205,8 @@ areas_overlap <- function(x., y., x_id) {
 
 ##################################################################################################
 
+message("running analyses")
+
 ```
 
 # covariates
@@ -237,7 +237,7 @@ ufp %>%
   labs(y="UFP adjustment after winsorization",
        x= "covariate value",
        col="Prediction",
-       title = "covariates associated with winsorization"
+       title = "covariates & winsorization"
        )
 
 ggsave(file.path("output", "summary", paste0("covariates_vs_winsorization.png")), width = 16, height = 10)
@@ -259,11 +259,11 @@ ufp %>%
        subtitle = "predictions decreased through winsorizaiton (i.e., very high predictions)"
        )
 
-ggsave(file.path("output", "summary", paste0("covariates_vs_winsorization_predictins_reduced.png")), width = 16, height = 10)
+ggsave(file.path("output", "summary", paste0("covariates_vs_winsorization_predictions_reduced.png")), width = 16, height = 10)
 
 ```
 
-* **modeling data was at least 32 m from m_to_truck. prediction locations can be as close as 1 m**
+* **modeling data was at least 32 m from m_to_truck. prediction locations can be as close as 0 or 1 m**
 
 
 ```{r}
@@ -293,17 +293,28 @@ compare %>%
 
 # histogram of all covariates
 compare %>%
-  # --> TEMP for plotting. drops values==0
+  # temp for plotting 
   mutate(value = ifelse(value==0, 1, value)) %>%
   
   ggplot(aes(x=value, fill=data_type)) + 
   facet_wrap(~name, scales="free") +
-  geom_histogram(position = "dodge") +
+  
+  geom_density(alpha=0.4) +
+  
+  # geom_histogram(position = "dodge", ) +
+  # scale_y_log10() + 
+  
+  # geom_bar(aes(y = (..count..)/sum(..count..))) +
+  # scale_y_continuous(labels=scales::percent) +
+  
   scale_x_log10() +
-  labs(subtitle = "x-axis is on the log10 scale (drops values<=0)")
+  labs(subtitle = "x-axis is on the log10 scale",
+       y="%"
+       )
 
-ggsave(file.path("output", "summary", paste0("covariates_histograms.png")), width = 12, height = 10)
-
+ggsave(file.path("output", "summary", paste0("covariate_density1.png")), width = 12, height = 10)
+#ggsave(file.path("output", "summary", paste0("covariates_histograms2.png")), width = 12, height = 10)
+#ggsave(file.path("output", "summary", paste0("covariate_barplot.png")), width = 12, height = 10)
 
 # histogram of m_to_truck alone
 compare %>%
