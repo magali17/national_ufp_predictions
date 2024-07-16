@@ -92,14 +92,18 @@ modeling_data <- modeling_data0  %>%
 
 ##################################################################################################
 # quantile summary files
-ufp_quantiles_2010 <- readRDS(file.path("output", "winsorize", "raw_quantiles_ufp_covs_2010.rds")) %>%
+ufp_quantiles_2010 <- readRDS(file.path("output", "winsorize",
+                                        "20240716_log_truck",
+                                        "raw_quantiles_ufp_covs_2010.rds")) %>%
   mutate(year=2010)
 
 # ufp_quantiles_2020 <- readRDS(file.path("output", "winsorize", "raw_quantiles_ufp_covs_2020.rds")) %>%
 #   mutate(year=2020) 
 
 # winsorized predictions
-ufp_2010 <- readRDS(file.path("output", "predictions", "original_model", "blocks", "modified", "ufp_covs_2010.rds")) %>%
+ufp_2010 <- readRDS(file.path("output", "predictions", "original_model", "blocks", 
+                              "20240716_log_truck",
+                              "modified", "ufp_covs_2010.rds")) %>%
   rename(ufp_original=ufp) %>%
   mutate(year=2010)
 
