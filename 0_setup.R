@@ -20,16 +20,29 @@ pacman::p_load(ufp.model.saha2021)
 ####################################################################
 
 # create directories
-output_path <- file.path("output", "predictions", "original_model", "blocks", "raw")
+output_path <- file.path("output", "predictions", "original_model", "blocks", 
+                         "20240716_log_truck",
+                         "raw")
 
 # create directories
 lapply(c("input",
          output_path,
-        file.path("output", "predictions", "original_model", "blocks", "modified"),
+        #file.path("output", "predictions", "original_model", "blocks", "modified"),
+        gsub("raw", "modified", output_path),
+        
+        # file.path("output", "predictions", "original_model", "blocks", 
+        #           "20240716_log_truck",
+        #           #"20240621_original_model",
+        #           "raw"),
+        # file.path("output", "predictions", "original_model", "blocks", 
+        #           "20240716_log_truck",
+        #           #"20240621_original_model",
+        #           "modified"),
+        
          file.path("output", "qc"),
         file.path("output", "other"),
-        file.path("output", "summary"),
-         file.path("output", "winsorize"),
+        file.path("output", "summary", "20240716_log_truck"),
+         file.path("output", "winsorize", "20240716_log_truck"),
         "original_model_fit"
          ), 
        function(x) {if(!dir.exists(x)){dir.create(x, recursive = T)}})

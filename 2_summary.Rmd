@@ -52,6 +52,9 @@ theme_set(theme_bw())
 theme_update(legend.position = "bottom")
 
 set.seed(1)
+
+output_path <- file.path("output", "summary", "20240716_log_truck" #"20240621_original_model"
+                         )
 ##################################################################################################
 # speed thigns up
 testing_mode <- FALSE #TRUE #e.g., reduce visit designs & windows/quantile combinations
@@ -240,7 +243,7 @@ ufp %>%
        title = "covariates & winsorization"
        )
 
-ggsave(file.path("output", "summary", paste0("covariates_vs_winsorization.png")), width = 16, height = 10)
+ggsave(file.path(output_path, paste0("covariates_vs_winsorization.png")), width = 16, height = 10)
 
 # same as above just for high predictions
 ufp %>%
@@ -259,7 +262,7 @@ ufp %>%
        subtitle = "predictions decreased through winsorizaiton (i.e., very high predictions)"
        )
 
-ggsave(file.path("output", "summary", paste0("covariates_vs_winsorization_predictions_reduced.png")), width = 16, height = 10)
+ggsave(file.path(output_path, paste0("covariates_vs_winsorization_predictions_reduced.png")), width = 16, height = 10)
 
 ```
 
@@ -312,9 +315,9 @@ compare %>%
        y="%"
        )
 
-ggsave(file.path("output", "summary", paste0("covariate_density1.png")), width = 12, height = 10)
-#ggsave(file.path("output", "summary", paste0("covariates_histograms2.png")), width = 12, height = 10)
-#ggsave(file.path("output", "summary", paste0("covariate_barplot.png")), width = 12, height = 10)
+ggsave(file.path(output_path, paste0("covariate_density1.png")), width = 12, height = 10)
+#ggsave(file.path(output_path, paste0("covariates_histograms2.png")), width = 12, height = 10)
+#ggsave(file.path(output_path, paste0("covariate_barplot.png")), width = 12, height = 10)
 
 # histogram of m_to_truck alone
 compare %>%
@@ -355,7 +358,7 @@ modeling_data0 %>%
   geom_smooth(method="lm", se=F,col="black") #+
   #stat_cor(aes(label = after_stat(r.label)))
 
-ggsave(file.path("output", "summary", paste0("covariates_vs_ufp_observations.png")), width = 14, height = 10)
+ggsave(file.path(output_path, paste0("covariates_vs_ufp_observations.png")), width = 14, height = 10)
 
 
 ```
@@ -436,30 +439,30 @@ map_locations <- function(x_min=NA, x_max=NA, y_min=NA, y_max=NA,
 ############################################
 # seattle - predictions reduced are mostly along/right on highways
 map_locations()
-ggsave(file.path("output", "summary", paste0("seattle_high_ufp_example1.png")), width = 8, height = 10)
+ggsave(file.path(output_path, paste0("seattle_high_ufp_example1.png")), width = 8, height = 10)
 
 # smaller areas
 map_locations(x_min = -122.4, x_max = -122.2, y_min = 47.55, y_max = 47.65, 
               predictions = all_prediction_types)
-ggsave(file.path("output", "summary", paste0("seattle_high_ufp_example2.png")), width = 10, height = 6)
+ggsave(file.path(output_path, paste0("seattle_high_ufp_example2.png")), width = 10, height = 6)
 
 ## very small
 map_locations(x_min = -122.29, x_max = -122.2, y_min = 47.57, y_max = 47.61, 
               predictions = all_prediction_types)
-ggsave(file.path("output", "summary", paste0("seattle_high_ufp_example3.png")), width = 10, height = 6)
+ggsave(file.path(output_path, paste0("seattle_high_ufp_example3.png")), width = 10, height = 6)
 
 ##################################################################################################
 # MANHATTAN
 ############################################
 map_locations(location = "New York", block_file = ny_blocks, 
               x_min=-74, x_max=-73.5, y_min=40.5, y_max=41.4)
-ggsave(file.path("output", "summary", paste0("ny_high_ufp_example1.png")), width = 10, height = 6)
+ggsave(file.path(output_path, paste0("ny_high_ufp_example1.png")), width = 10, height = 6)
 
 # closer look
 map_locations(location = "New York", block_file = ny_blocks, 
               x_min=-74.00, x_max=-73.9, y_min=40.7, y_max=40.76, 
               predictions = all_prediction_types)
-ggsave(file.path("output", "summary", paste0("ny_high_ufp_example2.png")), width = 10, height = 6)
+ggsave(file.path(output_path, paste0("ny_high_ufp_example2.png")), width = 10, height = 6)
 
 
 ```
@@ -487,7 +490,7 @@ lapply(years, function(this_year){
     labs(title = "Blocks with missing covariates (i.e., predictions)",
          subtitle = this_year)
   
-  ggsave(file.path("output", "summary", paste0("missing_predictions_", this_year, "TEST.png")), 
+  ggsave(file.path(output_path, paste0("missing_predictions_", this_year, "TEST.png")), 
          plot = p, width = 16, height = 10)
 
   print(p)
@@ -618,7 +621,7 @@ lapply(ufp_prediction_types, function(ufp_type){
   #   p <- p + scale_color_gradient2(low = "red", high = "blue")
   # }
 
-  ggsave(file.path("output", "summary", paste0("predictions_", ufp_type, ".png")), 
+  ggsave(file.path(output_path, paste0("predictions_", ufp_type, ".png")), 
          plot = p, width = 16, height = 10)
   
   print(p)
@@ -649,7 +652,7 @@ lapply(years, function(this_year){
     labs(title = "blocks with winsorized UFP predictions",
          subtitle = this_year)
   
-    ggsave(file.path("output", "summary", paste0("dichotimized_winsorized_predictions", this_year, ".png")), 
+    ggsave(file.path(output_path, paste0("dichotimized_winsorized_predictions", this_year, ".png")), 
            plot = p, width = 16, height = 10)
 
   print(p)

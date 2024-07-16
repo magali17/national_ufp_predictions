@@ -13,17 +13,23 @@ if (!is.null(sessionInfo()$otherPkgs)) {
 
 pacman::p_load(tidyverse, parallel)
 
-input_path <- file.path("output", "predictions", "original_model", "blocks", "raw")
-output_path <- file.path("output", "predictions", "original_model", "blocks", "modified")
+input_path <- file.path("output", "predictions", "original_model", "blocks", 
+                        "20240716_log_truck", #"20240621_original_model", 
+                        "raw")
+output_path <- file.path("output", "predictions", "original_model", "blocks", 
+                         "20240716_log_truck", #"20240621_original_model",
+                         "modified")
+
+raw_quantile_file_location <- file.path("output", "winsorize", "20240716_log_truck")
 
 prediction_files <- list.files(input_path)
 quantile_files <- paste0("raw_quantiles_", prediction_files)
 
-use_cores <- 1 #4 works in brain #6 is slow during winsorizing???
+use_cores <- 4 #4 works in brain #6 is slow during winsorizing???
 
 ####################################################################
 testing_mode <- FALSE
-override_quantile_file <- FALSE # TRUE if e.g., updating missing block covariates
+override_quantile_file <- TRUE # TRUE if e.g., updating missing block covariates
 override_winsorized_file <- TRUE
 
 ####################################################################
@@ -41,7 +47,7 @@ high_quantile <- 0.99#0.98
 # f=quantile_files[2]
 lapply(c(quantile_files), function(f){
   
-  this_quantile_file <- file.path("output", "winsorize", f)
+  this_quantile_file <- file.path(raw_quantile_file_location,f)
   
   if(!file.exists(this_quantile_file) | 
      override_quantile_file == TRUE) {
@@ -60,7 +66,7 @@ lapply(c(quantile_files), function(f){
     ufp_quantiles <- mclapply(quantile_list, mc.cores = use_cores, function(q){
       tibble(quantile = q,
              
-             # --> TEMP: some blocks have missing values for 'imp_a00750' 
+             # note: some blocks have missing values for 'imp_a00750' 
              conc = quantile(predictions$ufp, q, na.rm = T))
     }) %>%
       bind_rows()
@@ -93,7 +99,7 @@ mclapply(prediction_files, mc.cores = use_cores, function(f) {
      override_winsorized_file == TRUE) {
     
   # winsorization values for specific year covariates
-  ufp_quantiles <- readRDS(file.path("output", "winsorize", paste0("raw_quantiles_", f)))
+  ufp_quantiles <- readRDS(file.path(raw_quantile_file_location, paste0("raw_quantiles_", f)))
   low_conc <- ufp_quantiles$conc[ufp_quantiles$quantile==low_quantile] %>% as.numeric()
   high_conc <- ufp_quantiles$conc[ufp_quantiles$quantile==high_quantile] %>% as.numeric()
   
