@@ -27,6 +27,9 @@ UFP predictions have been updated:
 
 
 ```{r setup, include=FALSE}
+# to run this: 
+# Rscript -e 'rmarkdown::render("2_summary.Rmd", "html_document")'
+
 knitr::opts_chunk$set(echo = F, 
                       cache=F, cache.comments = F, 
                       message = F, warning = F, 
