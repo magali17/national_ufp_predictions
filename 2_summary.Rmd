@@ -57,7 +57,7 @@ output_path <- file.path("output", "summary", "20240716_log_truck" #"20240621_or
                          )
 ##################################################################################################
 # speed thigns up
-testing_mode <- TRUE #TRUE #e.g., reduce visit designs & windows/quantile combinations
+testing_mode <- FALSE #TRUE #e.g., reduce visit designs & windows/quantile combinations
 
 ##################################################################################################
 # VARIABLES
