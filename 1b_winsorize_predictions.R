@@ -1,6 +1,8 @@
 # Script winsorizes extreme UFP predictions using 2010 & 2020 covariates
 # output is here: output/winsorize and output/predictions/original_model/blocks/modified 
 
+# THESE NEED TO BE UPDATED IN THIS SCRIPT: '--> TEMP'
+
 ####################################################################
 # SETUP
 ####################################################################
@@ -23,23 +25,30 @@ output_path <- file.path("output", "predictions", "original_model", "blocks",
 raw_quantile_file_location <- file.path("output", "winsorize", "20240716_log_truck")
 
 prediction_files <- list.files(input_path)
+
+####################################################
+# --> TEMP TO SPEED THINGS UP - only look at 2010 for: quantile calculations & generating modified predictions
+prediction_files <- prediction_files[1]
+
+####################################################
+
 quantile_files <- paste0("raw_quantiles_", prediction_files)
 
 use_cores <- 4 #4 works in brain #6 is slow during winsorizing???
 
 ####################################################################
 testing_mode <- FALSE
-override_quantile_file <- FALSE # TRUE if e.g., updating missing block covariates
-override_winsorized_file <- FALSE
+override_quantile_file <- FALSE # TRUE if e.g., updating raw predictions
+override_winsorized_file <- TRUE
 
 ####################################################################
 # COMMON VARIABLES
 ####################################################################
 
 # winsorizing thresholds
-low_quantile <- 0.01#0.02
+low_quantile <- 0.01 
 ## results in max conc ~25k pt/cm3. Saha paper & block prediction max is ~26,579. anything higher produces much higher conc's (99th quantile ~105k)
-high_quantile <- 0.99#0.98
+high_quantile <- 0.99 
 #winsorizing_label <- paste0(low_quantile, high_quantile, sep="_")
 ####################################################################
 # CALCULATE DATASET QUANTILES FOR WINSORIZING
@@ -89,7 +98,7 @@ message("winsorizing predictions...")
 
 # --> make into fn to output serveral quantile estimaets?
 
-# f=prediction_files[2]
+# f=prediction_files[1]
 mclapply(prediction_files, mc.cores = use_cores, function(f) {
   
   raw_file <- file.path(input_path, f)

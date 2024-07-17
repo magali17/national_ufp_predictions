@@ -57,7 +57,7 @@ output_path <- file.path("output", "summary", "20240716_log_truck" #"20240621_or
                          )
 ##################################################################################################
 # speed thigns up
-testing_mode <- FALSE #TRUE #e.g., reduce visit designs & windows/quantile combinations
+testing_mode <- TRUE #TRUE #e.g., reduce visit designs & windows/quantile combinations
 
 ##################################################################################################
 # VARIABLES
@@ -66,7 +66,6 @@ testing_mode <- FALSE #TRUE #e.g., reduce visit designs & windows/quantile combi
 yr <- 2020
 project_crs <- 4269 #lat/long CRS commonly used in US 
 
-
 ##################################################################################################
 # LOAD DATA
 ##################################################################################################
@@ -74,20 +73,31 @@ message("loading data")
 
 # original model fit
 lm_fit <- readRDS(file.path("original_model_fit", "lm_fit.rda"))
-
 modeling_cov <- names(lm_fit$coefficients) %>% setdiff("(Intercept)")
+
+## updated to have log m to truck
+lm_fit_log_truck <- readRDS(file.path("original_model_fit", "lm_fit_log_truck.rda"))
+modeling_cov_log_truck <- names(lm_fit_log_truck$coefficients) %>% setdiff("(Intercept)")
 
 ##################################################################################################
 # model fit data
 location_info <- read.csv(file.path("original_model_fit", "pnc_lur_input_1km_intra_urban.csv")) %>%
   select(data_id, city_id, site_loc, site_type, data_year)
 
-
 modeling_data0 <- read.csv(file.path("original_model_fit", "input_used.csv")) %>% 
-  left_join(location_info, by=c("data_id", "city_id"))
+  left_join(location_info, by=c("data_id", "city_id")) %>%
+  # --> New 7/16/24. how we have now modeled this
+  mutate(
+    # put this back on the native scale
+    m_to_truck = 1/m_to_truck,
+    # log transform to better specify the model. there are no 0 values
+    log_m_to_truck = log(m_to_truck),
+  )
 
 modeling_data <- modeling_data0  %>%
-  select(id= data_id, lat, long, all_of(modeling_cov), pnc=PNC) %>%
+  select(id= data_id, lat, long, #all_of(modeling_cov), 
+         all_of(modeling_cov_log_truck),
+         pnc=PNC) %>%
   mutate(data_type="modeling")
 
 ##################################################################################################
@@ -108,9 +118,7 @@ ufp_2010 <- readRDS(file.path("output", "predictions", "original_model", "blocks
   mutate(year=2010)
 
 if(testing_mode==TRUE){
-  ufp_2010 <- slice_sample(ufp_2010, n = 1e3
-                            #n=1e6
-                           )
+  ufp_2010 <- slice_sample(ufp_2010, n = 1e6)
   }
 
 # ufp_2020 <- readRDS(file.path("output", "predictions", "original_model", "blocks", "modified", "ufp_covs_2020.rds"))  %>%
@@ -225,8 +233,11 @@ original model fit
   * hard to interpret since covariates are not standardized? 
 
 ```{r}
-
+message("original model fit")
 summary(lm_fit)
+
+message("with log m_to_truck on the native scale")
+summary(lm_fit_log_truck)
 
 ```
 
@@ -235,8 +246,10 @@ summary(lm_fit)
 
 ```{r}
 ufp %>%
-  mutate(m_to_truck_native_scale = 1/m_to_truck) %>%
-  pivot_longer(cols = c(all_of(modeling_cov), contains("m_to_truck"))) %>%
+  #mutate(m_to_truck_native_scale = 1/m_to_truck) %>%
+  pivot_longer(#cols = c(all_of(modeling_cov), contains("m_to_truck"))
+               cols = matches(paste0(c(modeling_cov, contains("m_to_truck")), collapse = "|"))
+               ) %>%
   ggplot(aes(x=value, y=ufp_difference)) +
   facet_wrap(~year+name, scales="free_x") +
   geom_smooth() +
@@ -244,7 +257,7 @@ ufp %>%
   labs(y="UFP adjustment after winsorization",
        x= "covariate value",
        col="Prediction",
-       title = "covariates & winsorization"
+       title = "predictions: covariates & winsorization"
        )
 
 ggsave(file.path(output_path, paste0("covariates_vs_winsorization.png")), width = 16, height = 10)
@@ -252,8 +265,10 @@ ggsave(file.path(output_path, paste0("covariates_vs_winsorization.png")), width 
 # same as above just for high predictions
 ufp %>%
   filter(winsorized == "prediction reduced") %>%
-  mutate(m_to_truck_native_scale = 1/m_to_truck) %>%
-  pivot_longer(cols = c(all_of(modeling_cov), contains("m_to_truck"))) %>%
+  #mutate(m_to_truck_native_scale = 1/m_to_truck) %>%
+  pivot_longer(#cols = c(all_of(modeling_cov), contains("m_to_truck"))
+                cols = matches(paste0(c(modeling_cov, contains("m_to_truck")), collapse = "|"))
+    ) %>%
   ggplot(aes(x=value, y=ufp_difference)) +
   facet_wrap(~year+name, scales="free_x") +
   geom_hline(yintercept = 0, linetype=2, alpha=0.5) +
@@ -281,8 +296,10 @@ compare <- ufp %>%
   select(names(modeling_data)) %>%
   rbind(modeling_data) %>%
   # # put on the native scale!
-  mutate(m_to_truck_native_scale = 1/m_to_truck) %>%
-  pivot_longer(cols = c(all_of(modeling_cov), contains("truck")))
+  #mutate(m_to_truck_native_scale = 1/m_to_truck) %>%
+  pivot_longer(#cols = c(all_of(modeling_cov), contains("truck"))
+                cols = matches(paste0(c(modeling_cov, contains("m_to_truck")), collapse = "|"))
+    )
 
 compare %>%
   group_by(name, data_type) %>%
@@ -298,41 +315,39 @@ compare %>%
         ) %>%
   kable_styling()
 
-# histogram of all covariates
-compare %>%
-  # temp for plotting 
-  mutate(value = ifelse(value==0, 1, value)) %>%
-  
-  ggplot(aes(x=value, fill=data_type)) + 
-  facet_wrap(~name, scales="free") +
-  
-  geom_density(alpha=0.4) +
-  
-  # geom_histogram(position = "dodge", ) +
-  # scale_y_log10() + 
-  
-  # geom_bar(aes(y = (..count..)/sum(..count..))) +
-  # scale_y_continuous(labels=scales::percent) +
-  
-  scale_x_log10() +
-  labs(subtitle = "x-axis is on the log10 scale",
-       y="%"
-       )
-
-ggsave(file.path(output_path, paste0("covariate_density1.png")), width = 12, height = 10)
-#ggsave(file.path(output_path, paste0("covariates_histograms2.png")), width = 12, height = 10)
-#ggsave(file.path(output_path, paste0("covariate_barplot.png")), width = 12, height = 10)
-
-# histogram of m_to_truck alone
-compare %>%
-  filter(grepl("m_to_truck", name)) %>%
-  ggplot(aes(x=value, fill=data_type)) + 
-  facet_wrap(~name, scales="free") +
-  geom_histogram(position = "dodge", )  +
-  scale_x_log10() + 
-  labs(x = "value",
-       subtitle = "x-axis is on the log10 scale"
-       )
+# # histogram of all covariates
+# compare %>%
+#   # temp for plotting 
+#   mutate(value = ifelse(value==0, 1, value)) %>%
+#   
+#   ggplot(aes(x=value, fill=data_type)) + 
+#   facet_wrap(~name, scales="free") +
+#   
+#   geom_density(alpha=0.4) +
+#   
+#   # geom_histogram(position = "dodge", ) +
+#   # scale_y_log10() + 
+#   
+#   # geom_bar(aes(y = (..count..)/sum(..count..))) +
+#   # scale_y_continuous(labels=scales::percent) +
+#   
+#   scale_x_log10() +
+#   labs(subtitle = "x-axis is on the log10 scale",
+#        y="%"
+#        )
+# 
+# ggsave(file.path(output_path, paste0("covariate_density1.png")), width = 12, height = 10)
+#  
+# # histogram of m_to_truck alone
+# compare %>%
+#   filter(grepl("m_to_truck", name)) %>%
+#   ggplot(aes(x=value, fill=data_type)) + 
+#   facet_wrap(~name, scales="free") +
+#   geom_histogram(position = "dodge", )  +
+#   scale_x_log10() + 
+#   labs(x = "value",
+#        subtitle = "x-axis is on the log10 scale"
+#        )
 
 ```
 
@@ -347,9 +362,10 @@ modeling data: PNC vs distance to truck
 ```{r}
 modeling_data0 %>%
   select(id= data_id, city_id, site_loc, site_type, data_year, lat, long, all_of(modeling_cov), pnc=PNC) %>%  
-  mutate(m_to_truck_native_scale = 1/m_to_truck,
-         m_to_truck_log = log(m_to_truck),
-         m_to_truck_native_scale_log = log(m_to_truck_native_scale),
+  mutate(#m_to_truck_native_scale = 1/m_to_truck,
+        m_to_truck_inverse = 1/m_to_truck,
+         log_m_to_truck = log(m_to_truck),
+         #m_to_truck_native_scale_log = log(m_to_truck_native_scale),
          city_id = as.factor(city_id)
          ) %>%
   pivot_longer(cols=c(all_of(modeling_cov), contains("m_to_truck"))) %>%
@@ -359,8 +375,9 @@ modeling_data0 %>%
   geom_point(alpha=0.3, aes(#col=city_id, #shape=site_type
                             )) +  #site_loc
   geom_smooth() + 
-  geom_smooth(method="lm", se=F,col="black") #+
+  geom_smooth(method="lm", se=F,col="black") +
   #stat_cor(aes(label = after_stat(r.label)))
+  labs(title = "Modeling covariages vs UFP observations")
 
 ggsave(file.path(output_path, paste0("covariates_vs_ufp_observations.png")), width = 14, height = 10)
 
@@ -383,12 +400,16 @@ ID some very high block predictions; are these on/very near roads? seattle examp
 # y_min = 47.57
 # y_max = 47.61
 # location="Seattle"
-# predictions = c("not changed", "prediction reduced", "prediction increased")
+# predictions = c("prediction reduced")
+
+x_min=NA
+x_max=NA
+y_min=NA
+y_max=NA
 
 # function maps high predictions vs block areas in a localized area
 map_locations <- function(x_min=NA, x_max=NA, y_min=NA, y_max=NA, 
                           location="Seattle", block_file = king_county_blocks,
-                          #predictions = c("not changed", "prediction reduced", "prediction increased")
                           predictions = c("prediction reduced")
                           ) {
   
@@ -412,7 +433,7 @@ map_locations <- function(x_min=NA, x_max=NA, y_min=NA, y_max=NA,
   st_as_sf(coords = c('long_block', 'lat_block'), crs=project_crs) %>%
   # only keep predictions in a small area
   areas_overlap(x. = .,
-                y. = local_area, #filter(some_urban_areas, NAME10==location),
+                y. = local_area,  
                 x_id = "block_key") %>%
   left_join(ufp, by="block_key")
 
@@ -559,14 +580,14 @@ ufp %>%
 winsorizing mostly impacts extremely high UFP predictions
 
 ```{r}
-ufp %>%
-  select(block_key, year, contains("ufp")) %>%
-  pivot_longer(cols=contains("ufp")) %>%
-  
-  ggplot(aes(x=value, fill=name)) + 
-  geom_histogram(position = "dodge") + 
-  facet_wrap(~year) +
-  labs(title = "Distribution of original and winsorized UFP predictions")
+# ufp %>%
+#   select(block_key, year, contains("ufp")) %>%
+#   pivot_longer(cols=contains("ufp")) %>%
+#   
+#   ggplot(aes(x=value, fill=name)) + 
+#   geom_histogram(position = "dodge") + 
+#   facet_wrap(~year) +
+#   labs(title = "Distribution of original and winsorized UFP predictions")
 
 # scatterplot
 ufp %>%
@@ -636,31 +657,31 @@ lapply(ufp_prediction_types, function(ufp_type){
 
 
 ```{r}
-# this_year=years[1]
-lapply(years, function(this_year){
-  p <- ufp %>%
-    filter(year==this_year,
-           #winsorized==TRUE
-           winsorized != "not changed"
-           ) %>%
-    st_as_sf(coords = c('long_block', 'lat_block'), crs=project_crs) %>%
-  
-    ggplot() + 
-    geom_sf(data = states, fill=alpha(0.01)) +
-    geom_sf_text(data = states, aes(label=STUSPS)) +
-    geom_sf_text(data = some_urban_areas, aes(label=NAME10), size=3, col="purple",
-                 #position = position_jitter(),
-                 check_overlap = T, #nudge_x = 1,
-                 ) +
-    geom_sf(aes(col=winsorized), alpha=0.4, size=0.2) + 
-    labs(title = "blocks with winsorized UFP predictions",
-         subtitle = this_year)
-  
-    ggsave(file.path(output_path, paste0("dichotimized_winsorized_predictions", this_year, ".png")), 
-           plot = p, width = 16, height = 10)
-
-  print(p)
-})
+# # this_year=years[1]
+# lapply(years, function(this_year){
+#   p <- ufp %>%
+#     filter(year==this_year,
+#            #winsorized==TRUE
+#            winsorized != "not changed"
+#            ) %>%
+#     st_as_sf(coords = c('long_block', 'lat_block'), crs=project_crs) %>%
+#   
+#     ggplot() + 
+#     geom_sf(data = states, fill=alpha(0.01)) +
+#     geom_sf_text(data = states, aes(label=STUSPS)) +
+#     geom_sf_text(data = some_urban_areas, aes(label=NAME10), size=3, col="purple",
+#                  #position = position_jitter(),
+#                  check_overlap = T, #nudge_x = 1,
+#                  ) +
+#     geom_sf(aes(col=winsorized), alpha=0.4, size=0.2) + 
+#     labs(title = "blocks with winsorized UFP predictions",
+#          subtitle = this_year)
+#   
+#     ggsave(file.path(output_path, paste0("dichotimized_winsorized_predictions", this_year, ".png")), 
+#            plot = p, width = 16, height = 10)
+# 
+#   print(p)
+# })
 
 ```
 

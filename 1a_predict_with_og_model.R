@@ -25,21 +25,51 @@ predictions_path <- file.path("output", "predictions", "original_model", "blocks
                               #"20240621_original_model",
                               "raw")
 ####################################################################
+# FIT A NEW MODEL WITH LOG M TO TRUCK
+# 
 # TEMP - UPDATING HOW LOGAN HAS CODDED THE UFP MODEL
 ## can afterwards delete this chunk
 ####################################################################
-ufp_model <- readRDS(file.path("original_model_fit", "lm_fit.rda")) 
+# original_ufp_model <- readRDS(file.path("original_model_fit", "lm_fit.rda"))
+# 
+# # we'll use log m to truck instead
+# covariate_names <- coef(original_ufp_model) %>%
+#   names() %>%
+#   setdiff(., c("(Intercept)")) %>%
+#   gsub("m_to_truck", "log_m_to_truck", .)
 
-covariate_names <- coef(ufp_model) %>% 
-  names() %>% 
-  setdiff(., c("(Intercept)"))
+# file originally came from UFP_LUR_Model.R 
+input_used <- read.csv(file.path("original_model_fit", "input_used.csv")) %>%
+  mutate(
+    # put this back on the native scale
+    m_to_truck = 1/m_to_truck,
+    # log transform to better specify the model. there are no 0 values
+    log_m_to_truck = log(m_to_truck),
+    # # covariate used in the model
+    # ll_a1_a3_s03000 = ll_a1_s03000 + ll_a3_s03000
+    )
+
+# from UFP_LUR_Model.R or readRDS(file.path("original_model_fit", "lm_fit.rda"))
+## we'll use log m to truck instead
+model_formula <- PNC ~  + imp_a00750  + log_m_to_truck + lu_resi_p15000 + lu_comm_p01500 + ll_a1_a3_s03000
+
+ufp_model <- lm(model_formula, data = input_used)
+message("new model fit with log m_to_truck")
+summary(ufp_model)
+
+covariate_names <- coef(ufp_model) %>%
+  names() %>%
+  setdiff(., c("(Intercept)")) 
+
+saveRDS(ufp_model, file.path("original_model_fit", "lm_fit_log_truck.rda"))
+
 
 ####################################################################
 # BLOCK PREDICTIONS
 ####################################################################
 covariate_files <- list.files(covariate_path)
 
-# x= covariate_files[2]
+# x= covariate_files[1]
 lapply(covariate_files, function(x) {
   new_prediction_file <- file.path(predictions_path, x)
   
@@ -47,7 +77,7 @@ lapply(covariate_files, function(x) {
      override_predictions==TRUE){
     message(paste("generating new predictions for", x))
     
-    # read in covariate file
+    # read in block covariate file
     covariates <- readRDS(file.path(covariate_path, x)) %>%
       rename(block_key = native_id,
              latitude = lat_block, 
@@ -59,21 +89,12 @@ lapply(covariate_files, function(x) {
              ) %>% 
       #mutate(ll_a3_s03000 = 0)
       mutate(block_key = str_pad(block_key, side = "left", pad = "0", width=15),
-             # ALREADY exists; normally this covariate is not available by default
-             #ll_a1_a3_s03000 = ll_a1_s03000 + ll_a3_s03000
-             ) %>%
+             m_to_truck = ifelse(m_to_truck==0, 1, m_to_truck),
+             # log transform distances (better model fit)
+             log_m_to_truck = log(m_to_truck)) %>%
       
       # TEMP WHILE LOGAN UPDATES THINGS
       select(block_key, matches(paste0(c(covariate_names, "longitude", "latitude"), collapse = "|"))) %>%
-      # take inverse of distance variables like Saha did. first, convert 0s to 1s
-      mutate_at(vars(starts_with("m_to_")), ~ifelse(.==0, 1, .)) %>%  
-      
-      # --> NEW
-      # don't do this for now - easier to interpret
-      #mutate_at(vars(starts_with("m_to_")), ~1/.) %>%
-      # log transform distances (better model fit)
-      mutate_at(vars(starts_with("m_to_")), ~log(.)) %>%
-      
       rename(lat_block = latitude, long_block = longitude)
       
       
@@ -96,18 +117,31 @@ lapply(covariate_files, function(x) {
     }
   }) 
 
-
-####################################################################
-#  
-####################################################################
-
-
 ####################################################################
 # DONE
 ####################################################################
 message("DONE WITH 1a_predict_with_og_model.R")
 
 
-
-
+####################################################################
+#  QC Checks - take long time to run
+####################################################################
+# # visualize predictions vs covariates
+# predictions %>%
+#   # --> TEMP
+#   #slice(1:1e4) %>%
+#   
+#   select(covariate_names, ufp) %>%
+#   
+#   pivot_longer(all_of(covariate_names)) %>%
+#   
+#   ggplot(aes(x=value, y=ufp)) + 
+#   facet_wrap(~name, scales="free") + 
+#   geom_point(alpha=0.1) + 
+#   geom_smooth() + 
+#   labs(x="covariate value",
+#        title = "Modeling data covariates and predicted in-sample UFP"
+#        )
+# 
+# ggsave(file.path("output", "qc", "predicted ufp vs modeling covariates log truck.png", width = 16, height = 10))
 
