@@ -38,7 +38,7 @@ use_cores <- 4 #4 works in brain #6 is slow during winsorizing???
 
 ####################################################################
 testing_mode <- FALSE
-override_quantile_file <- FALSE # TRUE if e.g., updating raw predictions
+override_quantile_file <- TRUE # TRUE if e.g., updating raw predictions
 override_winsorized_file <- TRUE
 
 ####################################################################
