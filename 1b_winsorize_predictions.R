@@ -30,7 +30,7 @@ use_cores <- 4 #4 works in brain #6 is slow during winsorizing???
 ####################################################################
 testing_mode <- FALSE
 override_quantile_file <- FALSE # TRUE if e.g., updating missing block covariates
-override_winsorized_file <- TRUE
+override_winsorized_file <- FALSE
 
 ####################################################################
 # COMMON VARIABLES
