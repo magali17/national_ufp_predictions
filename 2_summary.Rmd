@@ -360,7 +360,6 @@ modeling data: PNC vs distance to truck
 
 * lu_resi has groupings by city/type of sampilng 
 
---> fit the model w/ log_m_to_truck to see if fewer extremes are predicted? likely will still get some extreme valeus
 
 ```{r}
 modeling_data0 %>%
@@ -537,7 +536,7 @@ We are currently winsorizing at the 1st and 99th percentiles
 bind_rows(ufp_quantiles_2010#, 
           #ufp_quantiles_2020
           ) %>%
-  filter(quantile %in% c(0.02,0.98,
+  filter(quantile %in% c(#0.02,0.98,
                          0.01, 0.99
                          )) %>%
   select(year, everything()) %>%
